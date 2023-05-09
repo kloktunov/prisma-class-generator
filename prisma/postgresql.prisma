@@ -28,7 +28,16 @@ enum ProductAnotherType {
 }
 
 model Product {
-  id            Int                @id
+  /// @hide
+  /// ----
+  /// @postdata
+  /// @ApiProperty()
+  /// @Expose()
+  /// get customId(): string {
+  ///   return `id${this.id}`
+  /// }
+  id Int @id
+
   title         String             @db.VarChar(255)
   desc          String             @default("abc") @db.VarChar(1024)
   images        Json               @db.Json
@@ -56,7 +65,6 @@ model Company {
   totalIncome             BigInt    @default(100)
   lat                     Decimal
   lng                     Decimal
-  by                      Bytes
   products                Product[]
   tags                    String[]
   tagsWithEmptyDefault    String[]  @default([])
@@ -64,4 +72,5 @@ model Company {
   numTags                 Int[]
   numTagsWithEmptyDefault Int[]     @default([])
   numTagsWithDefault      Int[]     @default([1, 2])
+  by                      Bytes     @ignore
 }

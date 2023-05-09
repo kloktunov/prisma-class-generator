@@ -53,6 +53,15 @@ export interface ConvertModelInput {
 	useGraphQL?: boolean
 }
 
+export const getPrimitiveMapTypeFromDMMF = (
+	dmmfField: DMMF.Field,
+): PrimitiveMapTypeValues => {
+	if (typeof dmmfField.type !== 'string') {
+		return 'unknown'
+	}
+	return primitiveMapType[dmmfField.type]
+}
+
 export class PrismaConvertor {
 	static instance: PrismaConvertor
 	private _config: PrismaClassGeneratorConfig
@@ -82,14 +91,7 @@ export class PrismaConvertor {
 		return PrismaConvertor.instance
 	}
 
-	getPrimitiveMapTypeFromDMMF = (
-		dmmfField: DMMF.Field,
-	): PrimitiveMapTypeValues => {
-		if (typeof dmmfField.type !== 'string') {
-			return 'unknown'
-		}
-		return primitiveMapType[dmmfField.type]
-	}
+	
 
 	extractTypeGraphQLDecoratorFromField = (
 		dmmfField: DMMF.Field,
@@ -109,7 +111,7 @@ export class PrismaConvertor {
 			decorator.params.push(`(type) => GraphQLJSONObject`)
 		}
 
-		let type = this.getPrimitiveMapTypeFromDMMF(dmmfField)
+		let type = getPrimitiveMapTypeFromDMMF(dmmfField)
 
 		if (type && type !== 'any' && !isJson) {
 			let grahQLType = capitalizeFirst(type)
@@ -146,8 +148,18 @@ export class PrismaConvertor {
 	}
 
 	extractSwaggerDecoratorFromField = (
-		dmmfField: DMMF.Field,
+		field: FieldComponent,
 	): DecoratorComponent => {
+
+		const dmmfField = field.field;
+
+		if(field.hasHideDecorator){
+			return new DecoratorComponent({
+				name: 'ApiHideProperty',
+				importFrom: '@nestjs/swagger',
+			})
+		}
+
 		const options: SwaggerDecoratorParams = {}
 		const name =
 			dmmfField.isRequired === true
@@ -162,7 +174,7 @@ export class PrismaConvertor {
 			options.isArray = true
 		}
 
-		let type = this.getPrimitiveMapTypeFromDMMF(dmmfField)
+		let type = getPrimitiveMapTypeFromDMMF(dmmfField)
 		if (type && type !== 'any') {
 			options.type = capitalizeFirst(type)
 			decorator.params.push(options)
@@ -301,15 +313,26 @@ export class PrismaConvertor {
 	}
 
 	convertField = (dmmfField: DMMF.Field): FieldComponent => {
+
 		const field = new FieldComponent({
-			name: dmmfField.name,
+			field: dmmfField,
 			useUndefinedDefault: this._config.useUndefinedDefault,
 		})
-		let type = this.getPrimitiveMapTypeFromDMMF(dmmfField)
+		let type = getPrimitiveMapTypeFromDMMF(dmmfField)
+
+		console.log(field.decorators);
 
 		if (this.config.useSwagger) {
-			const decorator = this.extractSwaggerDecoratorFromField(dmmfField)
+			const decorator = this.extractSwaggerDecoratorFromField(field)
 			field.decorators.push(decorator)
+
+		}
+
+		if(field.hasHideDecorator){
+			field.decorators.push(new DecoratorComponent({
+				name: 'Exclude',
+				importFrom: 'class-transformer',
+			}))
 		}
 
 		if (this.config.useGraphQL) {

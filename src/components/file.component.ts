@@ -99,6 +99,16 @@ export class FileComponent implements Echoable {
 			field.decorators.forEach((decorator) => {
 				this.registerImport(decorator.name, decorator.importFrom)
 			})
+
+			field.imports?.forEach(importItem => {
+
+				let { from } = importItem;
+
+				importItem.items.forEach((item) => {
+					this.registerImport(item, from);
+				})
+
+			})
 		})
 
 		if (generator.getConfig().useGraphQL) {
